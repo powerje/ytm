@@ -1,5 +1,10 @@
 # ytm
 
+[![CI](https://github.com/powerje/ytm/actions/workflows/ci.yml/badge.svg)](https://github.com/powerje/ytm/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/github/license/powerje/ytm)](LICENSE)
+![Swift 6](https://img.shields.io/badge/Swift-6-F05138?logo=swift&logoColor=white)
+![macOS 14+](https://img.shields.io/badge/macOS-14%2B-000000?logo=apple)
+
 YouTube Music in the terminal. Search for songs, artists, albums and playlists, play them through a queue with keyboard shortcuts, and continue with radio when the queue runs out.
 
 Written in Swift for macOS. Audio is played by [mpv](https://mpv.io) with streams resolved by [yt-dlp](https://github.com/yt-dlp/yt-dlp).
