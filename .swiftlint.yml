@@ -1,0 +1,60 @@
+# Vendored code is linted upstream; the build directory is generated.
+excluded:
+  - Vendor
+  - .build
+  - .swiftpm
+
+line_length:
+  warning: 120
+  error: 160
+  ignores_urls: true
+  ignores_comments: true
+
+identifier_name:
+  min_length: 1
+  excluded: [id, fd, hl, gl]
+
+function_body_length:
+  warning: 80
+  error: 120
+
+type_body_length:
+  warning: 400
+  error: 600
+
+file_length:
+  warning: 500
+  error: 800
+
+cyclomatic_complexity:
+  warning: 20
+  error: 30
+
+nesting:
+  type_level: 2
+
+opt_in_rules:
+  - closure_spacing
+  - contains_over_filter_is_empty
+  - empty_count
+  - fatal_error_message
+  - first_where
+  - force_unwrapping
+  - implicit_return
+  - last_where
+  - overridden_super_call
+  - redundant_nil_coalescing
+  - sorted_first_last
+  - toggle_bool
+  - unneeded_parentheses_in_closure_argument
+  - yoda_condition
+
+trailing_comma:
+  mandatory_comma: true
+
+disabled_rules:
+  - todo
+  # swift-format owns brace placement (it puts `{` on its own line after multi-line conditions).
+  - opening_brace
+  # String(decoding:as:) is the intended non-failable conversion for process output.
+  - optional_data_string_conversion

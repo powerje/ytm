@@ -1,0 +1,8 @@
+# The vendored UI package is part of the source tree; re-include it even if a
+# global ignore file excludes vendor directories.
+!Vendor/
+
+.build/
+.swiftpm/
+*.xcodeproj
+.DS_Store

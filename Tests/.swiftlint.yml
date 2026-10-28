@@ -1,0 +1,4 @@
+# Test code may force-unwrap and force-try: a failure is a test failure.
+disabled_rules:
+  - force_unwrapping
+  - force_try
