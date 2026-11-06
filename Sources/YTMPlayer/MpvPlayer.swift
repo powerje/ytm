@@ -8,6 +8,9 @@ public struct PlaybackState: Sendable, Equatable {
     public var paused = false
     public var volume: Double = 100
     public var loading = false
+    /// A file is loaded (between mpv's `file-loaded` and `end-file`). Unlike
+    /// `duration`, this is set as soon as playback can be controlled.
+    public var hasFile = false
 
     public init() {}
 }
@@ -196,6 +199,7 @@ public actor MpvPlayer {
 
     public func load(_ track: Track) throws {
         state.loading = true
+        state.hasFile = false
         state.timePos = nil
         state.duration = nil
         publishState()
@@ -301,10 +305,12 @@ public actor MpvPlayer {
                 switch name {
                 case "file-loaded":
                     state.loading = false
+                    state.hasFile = true
                     stateChanged = true
                     eventsContinuation.yield(.fileLoaded)
                 case "end-file":
                     state.loading = false
+                    state.hasFile = false
                     stateChanged = true
                     eventsContinuation.yield(.ended(reason: reason ?? "unknown"))
                 default: break

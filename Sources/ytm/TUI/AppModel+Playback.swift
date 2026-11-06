@@ -23,9 +23,7 @@ extension AppModel {
                         show("\(list.title) has no playable tracks.")
                         return
                     }
-                    state.queue.replace(with: list.tracks)
-                    state.queueCursor = ListCursor()
-                    playCurrent()
+                    play(list.tracks)
                 }
             }
         }
@@ -115,8 +113,16 @@ extension AppModel {
 
     // MARK: - Playback
 
+    /// Replaces the queue with `tracks` and starts the first one.
+    func play(_ tracks: [Track]) {
+        state.queue.replace(with: tracks)
+        state.queueCursor = ListCursor()
+        playCurrent()
+    }
+
     func playCurrent() {
         guard let track = state.queue.current else { return }
+        lastLiveReload = .distantPast
         state.playback.loading = true
         state.message = nil
         Task { [player] in
@@ -131,7 +137,7 @@ extension AppModel {
 
     /// Starts playback when something was added to an idle queue.
     func startIfIdle() {
-        guard state.queue.current == nil || (state.playback.duration == nil && !state.playback.loading) else { return }
+        guard state.queue.current == nil || (!state.playback.hasFile && !state.playback.loading) else { return }
         if state.queue.current == nil { state.queue.advance() }
         followPlayingTrack()
         playCurrent()
@@ -143,7 +149,7 @@ extension AppModel {
     }
 
     func togglePause() {
-        if state.playback.duration == nil, !state.playback.loading {
+        if !state.playback.hasFile, !state.playback.loading {
             startIfIdle()
             return
         }
@@ -154,7 +160,9 @@ extension AppModel {
         if state.queue.advance() != nil {
             followPlayingTrack()
             playCurrent()
-        } else if state.radio, let seed = state.queue.current ?? state.queue.tracks.last {
+        } else if state.radio, let seed = state.queue.tracks.last(where: { !$0.isLive }) {
+            // Radio seeded from a live stream returns unrelated pop, so seed
+            // it from the last song instead.
             continueWithRadio(seed: seed)
         } else {
             state.playback.timePos = nil
@@ -201,6 +209,22 @@ extension AppModel {
         }
     }
 
+    /// A live stream has no end, so reaching one means it dropped. Rejoin
+    /// it; if it drops again within 30 seconds, stop and leave the rejoin to
+    /// the user (Space) rather than falling through to radio.
+    private func handleLiveDrop() {
+        if Date().timeIntervalSince(lastLiveReload) > 30 {
+            playCurrent()
+            lastLiveReload = Date()
+        } else {
+            state.playback.loading = false
+            state.playback.timePos = nil
+            state.playback.duration = nil
+            Task { [player] in try? await player.stop() }
+            show("Stream dropped. Press Space to rejoin.")
+        }
+    }
+
     func seek(by seconds: Double) {
         guard state.playback.duration != nil, !isPlayingLive else { return }
         Task { [player] in try? await player.seek(by: seconds) }
@@ -221,7 +245,7 @@ extension AppModel {
         case .play:
             if state.playback.paused { togglePause() } else { startIfIdle() }
         case .pause:
-            if !state.playback.paused, state.playback.duration != nil { togglePause() }
+            if !state.playback.paused, state.playback.hasFile { togglePause() }
         case .togglePlayPause:
             togglePause()
         case .next:
@@ -238,7 +262,7 @@ extension AppModel {
     }
 
     private func publishNowPlaying() {
-        let playing = state.playback.duration != nil || state.playback.loading
+        let playing = state.playback.hasFile || state.playback.loading
         mediaRemote?.update(track: playing ? state.queue.current : nil, playback: state.playback)
     }
 
@@ -262,14 +286,7 @@ extension AppModel {
         case .ended(let reason):
             switch reason {
             case "eof":
-                // A live stream has no end; reaching one means the stream
-                // dropped. Rejoin it, at most once every 30 seconds.
-                if isPlayingLive, Date().timeIntervalSince(lastLiveReload) > 30 {
-                    lastLiveReload = Date()
-                    playCurrent()
-                } else {
-                    next(auto: true)
-                }
+                if isPlayingLive { handleLiveDrop() } else { next(auto: true) }
             case "error":
                 let title = state.queue.current?.title ?? "track"
                 show("Could not play “\(title)”, skipping.")

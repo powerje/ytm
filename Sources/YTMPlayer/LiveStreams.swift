@@ -7,7 +7,8 @@ public struct LiveChannel: Sendable {
     public let name: String
     public let streamsURL: String
     /// Streams to pin to the top of the list, in order. A stream matches an
-    /// entry when its title contains every word of the entry (case-insensitive).
+    /// entry when its title contains every phrase of the entry, ignoring case.
+    /// The first live stream that matches is pinned.
     public let favorites: [[String]]
 
     public init(name: String, streamsURL: String, favorites: [[String]]) {
@@ -31,6 +32,9 @@ public enum LiveStreams {
     /// The channel's streams that are live right now, favorites first and
     /// the rest in the order the channel lists them. Stream ids change every
     /// time a stream is restarted, so they are looked up rather than stored.
+    ///
+    /// yt-dlp exits non-zero when any single entry fails, so a failure is
+    /// only reported when it produced no streams at all.
     public static func list(_ channel: LiveChannel, tools: ExternalTools) async throws -> [Track] {
         let result = try await ExternalTools.run(
             tools.ytdlp,
@@ -62,11 +66,13 @@ public enum LiveStreams {
                     videoId: id, title: title.trimmingCharacters(in: .whitespaces), artists: [channel.name],
                     isLive: true))
         }
-        let pinned = channel.favorites.compactMap { words in
-            live.first { track in
+        var pinned: [Track] = []
+        for words in channel.favorites {
+            let match = live.first { track in
                 let title = track.title.lowercased()
                 return words.allSatisfy { title.contains($0.lowercased()) }
             }
+            if let match, !pinned.contains(where: { $0.videoId == match.videoId }) { pinned.append(match) }
         }
         return pinned + live.filter { track in !pinned.contains { $0.videoId == track.videoId } }
     }

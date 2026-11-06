@@ -74,14 +74,21 @@ public struct ExternalTools: Sendable {
         }
         defer { watchdog.cancel() }
         // Drain pipes off the cooperative pool; readDataToEndOfFile blocks.
-        let (stdout, stderr): (Data, Data) = await withCheckedContinuation { continuation in
-            DispatchQueue.global().async {
-                let o = out.fileHandleForReading.readDataToEndOfFile()
-                let e = err.fileHandleForReading.readDataToEndOfFile()
-                continuation.resume(returning: (o, e))
+        // Cancelling the calling task kills the process instead of letting
+        // it run to completion for nobody.
+        let (stdout, stderr): (Data, Data) = await withTaskCancellationHandler {
+            await withCheckedContinuation { continuation in
+                DispatchQueue.global().async {
+                    let o = out.fileHandleForReading.readDataToEndOfFile()
+                    let e = err.fileHandleForReading.readDataToEndOfFile()
+                    continuation.resume(returning: (o, e))
+                }
             }
+        } onCancel: {
+            box.terminate()
         }
         box.waitUntilExit()
+        try Task.checkCancellation()
         return ProcessResult(
             stdout: String(decoding: stdout, as: UTF8.self),
             stderr: String(decoding: stderr, as: UTF8.self),

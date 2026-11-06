@@ -187,7 +187,7 @@ enum Screen {
     }
 
     private static func nowPlaying(_ s: ScreenState) -> [Segment] {
-        guard let track = s.queue.current, s.playback.duration != nil || s.playback.loading else {
+        guard let track = s.queue.current, s.playback.hasFile || s.playback.loading else {
             return fit([Segment(" Nothing playing.", .dim)], to: s.width)
         }
         let marker = s.playback.loading ? " … " : (s.playback.paused ? " ‖ " : " ▶ ")
@@ -199,7 +199,7 @@ enum Screen {
 
     private static func statusLine(_ s: ScreenState) -> [Segment] {
         var segments: [Segment] = []
-        let live = s.queue.current?.isLive == true && s.playback.duration != nil
+        let live = s.queue.current?.isLive == true && (s.playback.hasFile || s.playback.loading)
         if live {
             segments.append(Segment(" LIVE ", .playing))
         } else {

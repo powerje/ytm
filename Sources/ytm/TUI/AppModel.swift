@@ -38,19 +38,21 @@ final class AppModel {
     // MARK: - Lifecycle
 
     func start() async {
+        var playerStarted = true
         do {
             try await player.start(initialVolume: 60)
             if let info = player.processInfo {
                 CrashGuard.watch(childPid: info.pid, socketPath: info.socketPath)
             }
         } catch {
+            playerStarted = false
             show("Could not start mpv: \(error)")
         }
         watchResize()
         mediaRemote = MediaRemote { [weak self] command in
             self?.handle(remote: command)
         }
-        loadLiveStreams(autoplay: true)
+        loadLiveStreams(autoplay: playerStarted)
         render()
         for await event in player.events {
             handle(playerEvent: event)

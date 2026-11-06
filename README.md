@@ -51,7 +51,7 @@ ytm
 | `Enter` | Song: play now. Artist, album or playlist: replace the queue and play. In the queue: jump to that track |
 | `a` | Add the selected song, artist, album or playlist to the end of the queue |
 | `o` | Open an artist, album or playlist to browse its tracks |
-| `l` | List Lofi Girl's live streams (the study, sleep and synthwave streams come first) |
+| `l` | List Lofi Girl's live streams |
 | `L` `P` | Your liked songs, your playlists (same as `1` and `4` with an empty search) |
 | `Space` | Pause and resume |
 | `n` `p` | Next and previous track |

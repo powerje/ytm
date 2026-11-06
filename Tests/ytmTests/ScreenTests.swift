@@ -15,6 +15,7 @@ import YTMPlayer
         state.height = 20
         state.results = (1...40).map { .track(track($0)) }
         state.queue.replace(with: (1...30).map { track($0) })
+        state.playback.hasFile = true
         state.playback.duration = 200
         state.playback.timePos = 50
         for mode in [InputMode.normal, .search] {
@@ -74,6 +75,7 @@ import YTMPlayer
         let stream = Track(videoId: "live1", title: "lofi hip hop radio", artists: ["Lofi Girl"], isLive: true)
         state.results = [.track(stream), .track(track(2))]
         state.queue.replace(with: [stream])
+        state.playback.hasFile = true
         state.playback.duration = 72_000
         state.playback.timePos = 71_990
         let lines = Screen.render(state)
@@ -84,6 +86,17 @@ import YTMPlayer
         #expect(status.contains(" LIVE "))
         #expect(!status.contains("20:00:00"))
         #expect(!status.contains("━"))
+    }
+
+    @Test func `a live stream that is loaded but not yet probed still shows LIVE`() {
+        var state = ScreenState()
+        state.width = 120
+        let stream = Track(videoId: "live1", title: "lofi hip hop radio", artists: ["Lofi Girl"], isLive: true)
+        state.queue.replace(with: [stream])
+        state.playback.hasFile = true
+        let lines = Screen.render(state)
+        #expect(lines[lines.count - 2].plain.contains("lofi hip hop radio"))
+        #expect(lines[lines.count - 1].plain.contains(" LIVE "))
     }
 
     @Test func `cursor keeps the selection visible`() {
