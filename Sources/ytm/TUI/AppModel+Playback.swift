@@ -165,7 +165,7 @@ extension AppModel {
     }
 
     func previous() {
-        if let t = state.playback.timePos, t > 3 {
+        if let t = state.playback.timePos, t > 3, !isPlayingLive {
             seek(by: -t)
             return
         }
@@ -202,9 +202,11 @@ extension AppModel {
     }
 
     func seek(by seconds: Double) {
-        guard state.playback.duration != nil else { return }
+        guard state.playback.duration != nil, !isPlayingLive else { return }
         Task { [player] in try? await player.seek(by: seconds) }
     }
+
+    var isPlayingLive: Bool { state.queue.current?.isLive == true }
 
     func adjustVolume(by delta: Double) {
         let target = min(max(state.playback.volume + delta, 0), 100)
@@ -227,6 +229,7 @@ extension AppModel {
         case .previous:
             previous()
         case .seek(let position):
+            guard !isPlayingLive else { break }
             Task { [player] in try? await player.seek(to: position) }
         case .skip(let seconds):
             seek(by: seconds)
@@ -259,7 +262,14 @@ extension AppModel {
         case .ended(let reason):
             switch reason {
             case "eof":
-                next(auto: true)
+                // A live stream has no end; reaching one means the stream
+                // dropped. Rejoin it, at most once every 30 seconds.
+                if isPlayingLive, Date().timeIntervalSince(lastLiveReload) > 30 {
+                    lastLiveReload = Date()
+                    playCurrent()
+                } else {
+                    next(auto: true)
+                }
             case "error":
                 let title = state.queue.current?.title ?? "track"
                 show("Could not play “\(title)”, skipping.")

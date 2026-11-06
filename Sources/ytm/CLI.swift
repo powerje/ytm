@@ -214,6 +214,10 @@ struct CLI {
         case "playlist": printTracks(try await client.playlistTracks(browseId: args[1]))
         case "liked", "playlists", "artists", "albums": try await printLibrary(args[0], client: client)
         case "radio": printTracks(TrackList(title: "Radio", tracks: try await client.radio(for: args[1])))
+        case "live":
+            for t in try await LiveStreams.list(.lofiGirl, tools: ExternalTools.locate()) {
+                print("\(t.videoId)  \(t.title)")
+            }
         case "play":
             // Plays one video id for a few seconds through mpv, printing events.
             let tools = try ExternalTools.locate()
@@ -235,6 +239,7 @@ struct CLI {
                   search <songs|artists|albums|playlists> <query>
                   album <id> | artist <id> | playlist <id> | radio <videoId>
                   liked | playlists | artists | albums
+                  live
                   play <videoId> [seconds]
                 """)
         }

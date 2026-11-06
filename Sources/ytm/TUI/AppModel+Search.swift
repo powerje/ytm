@@ -63,6 +63,31 @@ extension AppModel {
         }
     }
 
+    /// Lists the live channel's streams. With `autoplay`, the first one (the
+    /// primary stream) starts playing when nothing is queued yet.
+    func loadLiveStreams(autoplay: Bool) {
+        let channel = LiveChannel.lofiGirl
+        state.busy = "Loading \(channel.name) streams…"
+        searchTask?.cancel()
+        searchTask = Task { [player] in
+            do {
+                let tracks = try await LiveStreams.list(channel, tools: player.tools)
+                guard !Task.isCancelled else { return }
+                showResults(tracks.map(SearchResult.track), title: "\(channel.name) live")
+                if autoplay, state.queue.isEmpty, let first = tracks.first {
+                    state.queue.replace(with: [first])
+                    state.queueCursor = ListCursor()
+                    playCurrent()
+                }
+            } catch {
+                guard !Task.isCancelled else { return }
+                state.busy = nil
+                show("Could not load \(channel.name) streams: \(error)")
+            }
+            render()
+        }
+    }
+
     static func libraryTitle(_ filter: SearchFilter) -> String {
         switch filter {
         case .songs: "Liked songs"

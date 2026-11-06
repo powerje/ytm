@@ -176,7 +176,7 @@ enum Screen {
             let playing = index == s.queue.index
             let marker = playing ? (s.playback.paused ? "‖ " : "▶ ") : "  "
             let number = TextFit.padLeft("\(index + 1)", to: 3) + " "
-            let duration = formatDuration(track.duration)
+            let duration = lengthLabel(track)
             let bodyWidth = max(width - marker.count - number.count - duration.count - 1, 4)
             let body = TextFit.pad(trackLabel(track), to: bodyWidth)
             let text = marker + number + body + " " + duration
@@ -199,12 +199,17 @@ enum Screen {
 
     private static func statusLine(_ s: ScreenState) -> [Segment] {
         var segments: [Segment] = []
-        let position = formatDuration(s.playback.timePos ?? (s.playback.duration == nil ? nil : 0))
-        let duration = formatDuration(s.playback.duration)
-        segments.append(Segment(" \(position)/\(duration) "))
+        let live = s.queue.current?.isLive == true && s.playback.duration != nil
+        if live {
+            segments.append(Segment(" LIVE ", .playing))
+        } else {
+            let position = formatDuration(s.playback.timePos ?? (s.playback.duration == nil ? nil : 0))
+            let duration = formatDuration(s.playback.duration)
+            segments.append(Segment(" \(position)/\(duration) "))
+        }
         let barWidth = min(max(s.width / 4, 8), 30)
         var filled = 0
-        if let t = s.playback.timePos, let d = s.playback.duration, d > 0 {
+        if !live, let t = s.playback.timePos, let d = s.playback.duration, d > 0 {
             filled = Int((t / d * Double(barWidth)).rounded(.down))
             filled = min(max(filled, 0), barWidth)
         }
@@ -220,8 +225,8 @@ enum Screen {
             case .search: hints = "  Enter search · Esc cancel"
             case .normal:
                 hints =
-                    "  / search · 1-4 filter · Enter play · a add · o open · Tab pane · Space pause · n/p"
-                    + " · ,/. seek · -/+ vol · r radio · q quit"
+                    "  / search · 1-4 filter · l live · Enter play · a add · o open · Tab pane · Space pause"
+                    + " · n/p · ,/. seek · -/+ vol · r radio · q quit"
             }
             segments.append(Segment(hints, .dim))
         }
@@ -234,10 +239,14 @@ enum Screen {
         track.artists.isEmpty ? track.title : "\(track.title) — \(track.artistLine)"
     }
 
+    static func lengthLabel(_ track: Track) -> String {
+        track.isLive ? "LIVE" : formatDuration(track.duration)
+    }
+
     static func describe(_ result: SearchResult, width: Int) -> String {
         switch result {
         case .track(let t):
-            let duration = formatDuration(t.duration)
+            let duration = lengthLabel(t)
             var label = trackLabel(t)
             if let album = t.album, !album.isEmpty, album != t.title { label += "  [\(album)]" }
             let bodyWidth = max(width - duration.count - 3, 4)

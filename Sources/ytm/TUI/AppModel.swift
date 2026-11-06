@@ -18,6 +18,8 @@ final class AppModel {
     var searchTask: Task<Void, Never>?
     var fetchTask: Task<Void, Never>?
     private var messageTask: Task<Void, Never>?
+    /// When a live stream was last reloaded after dropping; bounds retries.
+    var lastLiveReload = Date.distantPast
     private var resizeSource: DispatchSourceSignal?
     var mediaRemote: MediaRemote?
 
@@ -48,6 +50,7 @@ final class AppModel {
         mediaRemote = MediaRemote { [weak self] command in
             self?.handle(remote: command)
         }
+        loadLiveStreams(autoplay: true)
         render()
         for await event in player.events {
             handle(playerEvent: event)
@@ -132,6 +135,7 @@ final class AppModel {
         case .enter: activateSelection()
         case .character("a"): appendSelection()
         case .character("o"): openSelection()
+        case .character("l"): loadLiveStreams(autoplay: false)
         case .character("L"): loadLibrary(.songs)
         case .character("P"): loadLibrary(.playlists)
         case .character(" "): togglePause()

@@ -67,6 +67,25 @@ import YTMPlayer
         #expect(queueRow.contains("Song 2"))
     }
 
+    @Test func `live streams show LIVE instead of a length or position`() {
+        var state = ScreenState()
+        state.width = 120
+        state.height = 24
+        let stream = Track(videoId: "live1", title: "lofi hip hop radio", artists: ["Lofi Girl"], isLive: true)
+        state.results = [.track(stream), .track(track(2))]
+        state.queue.replace(with: [stream])
+        state.playback.duration = 72_000
+        state.playback.timePos = 71_990
+        let lines = Screen.render(state)
+        #expect(lines[3].plain.contains("LIVE"))
+        #expect(lines[4].plain.contains("3:20"))
+        #expect(lines[3].plain.contains("lofi hip hop radio — Lofi Girl"))
+        let status = lines[lines.count - 1].plain
+        #expect(status.contains(" LIVE "))
+        #expect(!status.contains("20:00:00"))
+        #expect(!status.contains("━"))
+    }
+
     @Test func `cursor keeps the selection visible`() {
         var cursor = ListCursor()
         cursor.move(by: 1, count: 0, visibleRows: 5)
