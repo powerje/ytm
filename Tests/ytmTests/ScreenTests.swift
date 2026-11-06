@@ -117,6 +117,31 @@ import YTMPlayer
         #expect(cursor.offset == 0)
     }
 
+    @Test func `rows with emoji or wide characters still fill the terminal width exactly`() {
+        var state = ScreenState()
+        state.width = 60
+        state.height = 12
+        let wide = Track(videoId: "w", title: "lofi hip hop radio 📚 beats ⛩️ 東京 ☔", artists: ["Lofi Girl"], isLive: true)
+        state.results = [.track(wide)]
+        state.queue.replace(with: [wide])
+        state.playback.hasFile = true
+        for line in Screen.render(state) {
+            #expect(TextFit.displayWidth(line.plain) == 60, "\(line.plain)")
+        }
+        #expect(TextFit.displayWidth("📚") == 2)
+        #expect(TextFit.displayWidth("⛩️") == 2)
+        #expect(TextFit.displayWidth("東") == 2)
+        #expect(TextFit.displayWidth("1") == 1)
+        #expect(TextFit.displayWidth("#") == 1)
+        #expect(TextFit.pad("a📚b", to: 6) == "a📚b  ")
+        #expect(TextFit.truncate("ab📚cd", to: 4) == "ab…")
+        #expect(TextFit.truncate("ab📚cd", to: 5) == "ab📚…")
+    }
+
+    @Test func `segments drop control characters and bidi overrides`() {
+        #expect(Segment("a\u{1b}[2Jb\u{202e}c").text == "a[2Jbc")
+    }
+
     @Test func `text fitting pads and truncates`() {
         #expect(TextFit.pad("abc", to: 5) == "abc  ")
         #expect(TextFit.pad("abcdef", to: 5) == "abcd…")

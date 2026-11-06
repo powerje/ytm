@@ -52,7 +52,8 @@ final class AppModel {
         mediaRemote = MediaRemote { [weak self] command in
             self?.handle(remote: command)
         }
-        loadLiveStreams(autoplay: playerStarted)
+        let autoplay = ProcessInfo.processInfo.environment["YTM_AUTOPLAY"] != "0"
+        loadLiveStreams(autoplay: playerStarted && autoplay)
         render()
         for await event in player.events {
             handle(playerEvent: event)

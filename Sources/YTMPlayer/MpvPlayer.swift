@@ -107,7 +107,7 @@ final class MpvConnection: @unchecked Sendable {
 ///
 /// mpv is launched with `--no-config` so no user configuration or scripts are
 /// loaded, and with the bundled ytdl hook pointed at the located `yt-dlp`,
-/// which is also told to ignore its own configuration files.
+/// which is also told to ignore its own configuration files and plugins.
 public actor MpvPlayer {
     public let tools: ExternalTools
     public nonisolated let events: AsyncStream<PlayerEvent>
@@ -156,7 +156,7 @@ public actor MpvPlayer {
             "--ytdl=yes",
             "--ytdl-format=bestaudio/best",
             "--script-opts=ytdl_hook-ytdl_path=\(tools.ytdlp),ytdl_hook-try_ytdl_first=yes",
-            "--ytdl-raw-options=ignore-config=",
+            "--ytdl-raw-options=ignore-config=,no-plugin-dirs=",
             "--input-ipc-server=\(socketPath)",
         ]
         process.standardInput = FileHandle.nullDevice

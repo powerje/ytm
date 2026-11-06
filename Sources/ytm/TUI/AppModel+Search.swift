@@ -63,8 +63,8 @@ extension AppModel {
         }
     }
 
-    /// Lists the live channel's streams. With `autoplay`, the first one
-    /// starts playing when nothing is queued yet.
+    /// Lists the live channel's streams. With `autoplay`, the channel's main
+    /// stream starts playing when nothing is queued yet.
     func loadLiveStreams(autoplay: Bool) {
         let channel = LiveChannel.lofiGirl
         state.busy = "Loading \(channel.name) streams…"
@@ -75,7 +75,11 @@ extension AppModel {
                 guard !Task.isCancelled else { return }
                 showResults(tracks.map(SearchResult.track), title: "\(channel.name) live")
                 if autoplay, state.queue.isEmpty, let first = tracks.first {
-                    play([first])
+                    if channel.isPrimary(first) {
+                        play([first])
+                    } else {
+                        show("\(channel.name)'s main stream is not live. Pick one with Enter.")
+                    }
                 }
             } catch {
                 guard !Task.isCancelled else { return }

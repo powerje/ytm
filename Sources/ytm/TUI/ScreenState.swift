@@ -263,16 +263,17 @@ enum Screen {
         }
     }
 
-    /// Truncates or pads a row of segments to exactly `width` characters.
+    /// Truncates or pads a row of segments to exactly `width` columns.
     static func fit(_ segments: [Segment], to width: Int) -> [Segment] {
         var out: [Segment] = []
         var used = 0
         for segment in segments {
             guard used < width else { break }
             let remaining = width - used
-            if segment.text.count <= remaining {
+            let segmentWidth = TextFit.displayWidth(segment.text)
+            if segmentWidth <= remaining {
                 out.append(segment)
-                used += segment.text.count
+                used += segmentWidth
             } else {
                 out.append(Segment(TextFit.truncate(segment.text, to: remaining), segment.style))
                 used = width
