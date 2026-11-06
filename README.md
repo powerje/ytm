@@ -5,7 +5,7 @@
 ![Swift 6](https://img.shields.io/badge/Swift-6-F05138?logo=swift&logoColor=white)
 ![macOS 14+](https://img.shields.io/badge/macOS-14%2B-000000?logo=apple)
 
-YouTube Music in the terminal. Search for songs, artists, albums and playlists, play them through a queue with keyboard shortcuts, and continue with radio when the queue runs out.
+YouTube Music in the terminal. Search for songs, artists, albums and playlists, play them through a queue with keyboard shortcuts, and continue with radio when the queue runs out. On launch it lists [Lofi Girl](https://www.youtube.com/@LofiGirl/streams)'s live streams and starts the main one; set `YTM_AUTOPLAY=0` to only list them.
 
 Written in Swift for macOS. Audio is played by [mpv](https://mpv.io) with streams resolved by [yt-dlp](https://github.com/yt-dlp/yt-dlp).
 
@@ -51,6 +51,7 @@ ytm
 | `Enter` | Song: play now. Artist, album or playlist: replace the queue and play. In the queue: jump to that track |
 | `a` | Add the selected song, artist, album or playlist to the end of the queue |
 | `o` | Open an artist, album or playlist to browse its tracks |
+| `l` | List Lofi Girl's live streams |
 | `L` `P` | Your liked songs, your playlists (same as `1` and `4` with an empty search) |
 | `Space` | Pause and resume |
 | `n` `p` | Next and previous track |
@@ -68,9 +69,10 @@ This project keeps third-party code to a minimum.
 
 - The only Swift dependency is a terminal UI library, vendored into `Vendor/` at a pinned commit and reviewed in-tree. `just deps-check` fails if anything else appears. See [DEPENDENCIES.md](DEPENDENCIES.md).
 - Networking, JSON, hashing and file handling use the Apple SDK only.
-- mpv runs with `--no-config`, so no user configuration or scripts are loaded, and yt-dlp is run with its configuration files ignored. Nothing is downloaded or installed by `ytm` itself.
+- mpv runs with `--no-config`, so no user configuration or scripts are loaded, and yt-dlp is run with its configuration files and plugin directories ignored. Nothing is downloaded or installed by `ytm` itself.
 - Credentials are stored in `~/Library/Application Support/ytm-cli/auth.json`, readable only by your user (`0600`). They are sent only to `music.youtube.com`, over HTTPS, and never written to logs.
-- Search and playback send no credentials at all.
+- Search and playback send no credentials at all. The live stream list is fetched at launch from the channel's public streams page on `www.youtube.com`, through yt-dlp, without cookies.
+- Titles from YouTube are stripped of control characters before they reach the terminal.
 
 ## Develop
 

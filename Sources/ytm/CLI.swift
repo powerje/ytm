@@ -113,12 +113,18 @@ struct CLI {
             report("mpv version", r.stdout.split(separator: "\n").first.map(String.init))
         }
         if let ytdlp {
-            let r = try await ExternalTools.run(ytdlp, ["--ignore-config", "--version"], timeout: 15)
-            report("yt-dlp version", r.stdout.trimmingCharacters(in: .whitespacesAndNewlines))
+            let r = try await ExternalTools.run(
+                ytdlp, ["--ignore-config", "--no-plugin-dirs", "--version"], timeout: 15)
+            let version = r.stdout.trimmingCharacters(in: .whitespacesAndNewlines)
+            report(
+                "yt-dlp version", r.status == 0 && !version.isEmpty ? version : nil, hint: "Try: brew upgrade yt-dlp")
             print("  probing stream extraction (this contacts YouTube)…")
             let probe = try await ExternalTools.run(
                 ytdlp,
-                ["--ignore-config", "-f", "bestaudio/best", "-g", "https://music.youtube.com/watch?v=dQw4w9WgXcQ"],
+                [
+                    "--ignore-config", "--no-plugin-dirs", "-f", "bestaudio/best", "-g",
+                    "https://music.youtube.com/watch?v=dQw4w9WgXcQ",
+                ],
                 timeout: 60)
             if probe.status == 0, probe.stdout.hasPrefix("http") {
                 print("  stream extraction: ok")
@@ -127,6 +133,15 @@ struct CLI {
                 let detail = probe.stderr.split(separator: "\n").last.map(String.init) ?? "exit status \(probe.status)"
                 print("  stream extraction: FAILED — \(detail)")
                 print("  Try: brew upgrade yt-dlp")
+            }
+            if let mpv {
+                do {
+                    let streams = try await LiveStreams.list(.lofiGirl, tools: ExternalTools(mpv: mpv, ytdlp: ytdlp))
+                    print("  live streams: \(streams.count) found")
+                } catch {
+                    ok = false
+                    print("  live streams: FAILED — \(error)")
+                }
             }
         }
         print("Credentials")
@@ -214,6 +229,10 @@ struct CLI {
         case "playlist": printTracks(try await client.playlistTracks(browseId: args[1]))
         case "liked", "playlists", "artists", "albums": try await printLibrary(args[0], client: client)
         case "radio": printTracks(TrackList(title: "Radio", tracks: try await client.radio(for: args[1])))
+        case "live":
+            for t in try await LiveStreams.list(.lofiGirl, tools: ExternalTools.locate()) {
+                print("\(t.videoId)  \(t.title)")
+            }
         case "play":
             // Plays one video id for a few seconds through mpv, printing events.
             let tools = try ExternalTools.locate()
@@ -235,6 +254,7 @@ struct CLI {
                   search <songs|artists|albums|playlists> <query>
                   album <id> | artist <id> | playlist <id> | radio <videoId>
                   liked | playlists | artists | albums
+                  live
                   play <videoId> [seconds]
                 """)
         }

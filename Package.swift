@@ -41,7 +41,7 @@ let package = Package(
         ),
         .testTarget(
             name: "ytmTests",
-            dependencies: ["ytm"]
+            dependencies: ["ytm", "YTMPlayer"]
         ),
     ],
     swiftLanguageModes: [.v6]

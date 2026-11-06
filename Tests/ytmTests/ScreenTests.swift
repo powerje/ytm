@@ -15,6 +15,7 @@ import YTMPlayer
         state.height = 20
         state.results = (1...40).map { .track(track($0)) }
         state.queue.replace(with: (1...30).map { track($0) })
+        state.playback.hasFile = true
         state.playback.duration = 200
         state.playback.timePos = 50
         for mode in [InputMode.normal, .search] {
@@ -67,6 +68,37 @@ import YTMPlayer
         #expect(queueRow.contains("Song 2"))
     }
 
+    @Test func `live streams show LIVE instead of a length or position`() {
+        var state = ScreenState()
+        state.width = 120
+        state.height = 24
+        let stream = Track(videoId: "live1", title: "lofi hip hop radio", artists: ["Lofi Girl"], isLive: true)
+        state.results = [.track(stream), .track(track(2))]
+        state.queue.replace(with: [stream])
+        state.playback.hasFile = true
+        state.playback.duration = 72_000
+        state.playback.timePos = 71_990
+        let lines = Screen.render(state)
+        #expect(lines[3].plain.contains("LIVE"))
+        #expect(lines[4].plain.contains("3:20"))
+        #expect(lines[3].plain.contains("lofi hip hop radio — Lofi Girl"))
+        let status = lines[lines.count - 1].plain
+        #expect(status.contains(" LIVE "))
+        #expect(!status.contains("20:00:00"))
+        #expect(!status.contains("━"))
+    }
+
+    @Test func `a live stream that is loaded but not yet probed still shows LIVE`() {
+        var state = ScreenState()
+        state.width = 120
+        let stream = Track(videoId: "live1", title: "lofi hip hop radio", artists: ["Lofi Girl"], isLive: true)
+        state.queue.replace(with: [stream])
+        state.playback.hasFile = true
+        let lines = Screen.render(state)
+        #expect(lines[lines.count - 2].plain.contains("lofi hip hop radio"))
+        #expect(lines[lines.count - 1].plain.contains(" LIVE "))
+    }
+
     @Test func `cursor keeps the selection visible`() {
         var cursor = ListCursor()
         cursor.move(by: 1, count: 0, visibleRows: 5)
@@ -83,6 +115,31 @@ import YTMPlayer
         cursor.clamp(count: 3, visibleRows: 5)
         #expect(cursor.selection == 2)
         #expect(cursor.offset == 0)
+    }
+
+    @Test func `rows with emoji or wide characters still fill the terminal width exactly`() {
+        var state = ScreenState()
+        state.width = 60
+        state.height = 12
+        let wide = Track(videoId: "w", title: "lofi hip hop radio 📚 beats ⛩️ 東京 ☔", artists: ["Lofi Girl"], isLive: true)
+        state.results = [.track(wide)]
+        state.queue.replace(with: [wide])
+        state.playback.hasFile = true
+        for line in Screen.render(state) {
+            #expect(TextFit.displayWidth(line.plain) == 60, "\(line.plain)")
+        }
+        #expect(TextFit.displayWidth("📚") == 2)
+        #expect(TextFit.displayWidth("⛩️") == 2)
+        #expect(TextFit.displayWidth("東") == 2)
+        #expect(TextFit.displayWidth("1") == 1)
+        #expect(TextFit.displayWidth("#") == 1)
+        #expect(TextFit.pad("a📚b", to: 6) == "a📚b  ")
+        #expect(TextFit.truncate("ab📚cd", to: 4) == "ab…")
+        #expect(TextFit.truncate("ab📚cd", to: 5) == "ab📚…")
+    }
+
+    @Test func `segments drop control characters and bidi overrides`() {
+        #expect(Segment("a\u{1b}[2Jb\u{202e}c").text == "a[2Jbc")
     }
 
     @Test func `text fitting pads and truncates`() {

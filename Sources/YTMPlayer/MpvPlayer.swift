@@ -8,6 +8,9 @@ public struct PlaybackState: Sendable, Equatable {
     public var paused = false
     public var volume: Double = 100
     public var loading = false
+    /// A file is loaded (between mpv's `file-loaded` and `end-file`). Unlike
+    /// `duration`, this is set as soon as playback can be controlled.
+    public var hasFile = false
 
     public init() {}
 }
@@ -104,7 +107,7 @@ final class MpvConnection: @unchecked Sendable {
 ///
 /// mpv is launched with `--no-config` so no user configuration or scripts are
 /// loaded, and with the bundled ytdl hook pointed at the located `yt-dlp`,
-/// which is also told to ignore its own configuration files.
+/// which is also told to ignore its own configuration files and plugins.
 public actor MpvPlayer {
     public let tools: ExternalTools
     public nonisolated let events: AsyncStream<PlayerEvent>
@@ -153,7 +156,7 @@ public actor MpvPlayer {
             "--ytdl=yes",
             "--ytdl-format=bestaudio/best",
             "--script-opts=ytdl_hook-ytdl_path=\(tools.ytdlp),ytdl_hook-try_ytdl_first=yes",
-            "--ytdl-raw-options=ignore-config=",
+            "--ytdl-raw-options=ignore-config=,no-plugin-dirs=",
             "--input-ipc-server=\(socketPath)",
         ]
         process.standardInput = FileHandle.nullDevice
@@ -196,6 +199,7 @@ public actor MpvPlayer {
 
     public func load(_ track: Track) throws {
         state.loading = true
+        state.hasFile = false
         state.timePos = nil
         state.duration = nil
         publishState()
@@ -301,10 +305,12 @@ public actor MpvPlayer {
                 switch name {
                 case "file-loaded":
                     state.loading = false
+                    state.hasFile = true
                     stateChanged = true
                     eventsContinuation.yield(.fileLoaded)
                 case "end-file":
                     state.loading = false
+                    state.hasFile = false
                     stateChanged = true
                     eventsContinuation.yield(.ended(reason: reason ?? "unknown"))
                 default: break

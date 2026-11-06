@@ -18,6 +18,8 @@ final class AppModel {
     var searchTask: Task<Void, Never>?
     var fetchTask: Task<Void, Never>?
     private var messageTask: Task<Void, Never>?
+    /// When a live stream was last reloaded after dropping; bounds retries.
+    var lastLiveReload = Date.distantPast
     private var resizeSource: DispatchSourceSignal?
     var mediaRemote: MediaRemote?
 
@@ -36,18 +38,22 @@ final class AppModel {
     // MARK: - Lifecycle
 
     func start() async {
+        var playerStarted = true
         do {
             try await player.start(initialVolume: 60)
             if let info = player.processInfo {
                 CrashGuard.watch(childPid: info.pid, socketPath: info.socketPath)
             }
         } catch {
+            playerStarted = false
             show("Could not start mpv: \(error)")
         }
         watchResize()
         mediaRemote = MediaRemote { [weak self] command in
             self?.handle(remote: command)
         }
+        let autoplay = ProcessInfo.processInfo.environment["YTM_AUTOPLAY"] != "0"
+        loadLiveStreams(autoplay: playerStarted && autoplay)
         render()
         for await event in player.events {
             handle(playerEvent: event)
@@ -132,6 +138,7 @@ final class AppModel {
         case .enter: activateSelection()
         case .character("a"): appendSelection()
         case .character("o"): openSelection()
+        case .character("l"): loadLiveStreams(autoplay: false)
         case .character("L"): loadLibrary(.songs)
         case .character("P"): loadLibrary(.playlists)
         case .character(" "): togglePause()

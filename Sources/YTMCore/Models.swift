@@ -6,14 +6,19 @@ public struct Track: Identifiable, Hashable, Sendable {
     public let artists: [String]
     public let album: String?
     public let duration: TimeInterval?
+    /// A live stream: no fixed length, and seeking is meaningless.
+    public let isLive: Bool
 
-    public init(videoId: String, title: String, artists: [String], album: String? = nil, duration: TimeInterval? = nil)
-    {
+    public init(
+        videoId: String, title: String, artists: [String], album: String? = nil, duration: TimeInterval? = nil,
+        isLive: Bool = false
+    ) {
         self.videoId = videoId
         self.title = title
         self.artists = artists
         self.album = album
         self.duration = duration
+        self.isLive = isLive
     }
 
     public var id: String { videoId }
